@@ -398,7 +398,7 @@ def approve_4pool_to_spend_usdc(address: str):
     signed_txn = web3.eth.account.sign_transaction(txn, private_key)
 
     # Send Transaction
-    tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
 
     # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
@@ -547,7 +547,7 @@ def withdaw_from_curve_pool(address: str):
     signed_txn = web3.eth.account.sign_transaction(txn, private_key)
 
     # Send Transaction
-    tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
 
     # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
