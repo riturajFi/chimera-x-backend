@@ -307,7 +307,7 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
-    # Contract details
+    # Contract Details
     contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     abi = [
         {
@@ -323,47 +323,68 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
         },
     ]
 
-    # Load private key (DO NOT expose this in production)
-    private_key = "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824"
-    sender_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    receiver_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    amount = 1  # Amount to transfer
+    # Load Private Key Securely
+    private_key = os.getenv("AGENTKIT_PRIVATE_KEY")
+    if not private_key:
+        raise ValueError(
+            "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
-    # Create contract instance
+    # Addresses
+    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    recipient_address = address
+
+    # Amount to Transfer (1 Wei in USDC terms)
+    amount = 1  # 1 Wei of USDC
+
+    # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
-    # Get nonce
-    nonce = web3.eth.get_transaction_count(sender_address)
+    # Get Nonce (for Spender)
+    nonce = web3.eth.get_transaction_count(spender_address)
 
-    # Estimate gas price and gas limit
-    gas_price = web3.to_wei("10", "gwei")  # Adjust as needed
-    gas_limit = 100000  # Adjust based on estimated gas
+    # Estimate Gas
+    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
+        "from": spender_address
+    })
+    print(f"Estimated Gas Limit: {estimated_gas_limit}")
 
-    # Build transaction
-    txn = contract.functions.transferFrom(sender_address, receiver_address, amount).build_transaction({
-        "from": receiver_address,
-        "gas": gas_limit,
-        "gasPrice": gas_price,
+    # Get Optimal Gas Price
+    base_fee = web3.eth.gas_price
+    priority_fee = web3.to_wei("1", "gwei")  # Safe low priority fee
+    max_fee = base_fee + priority_fee  # Ensure minimal overpaying
+
+    # Build the Transaction
+    txn = contract.functions.transferFrom(
+        owner_address,
+        recipient_address,
+        amount
+    ).build_transaction({
+        "from": spender_address,
+        "gas": estimated_gas_limit,  # Dynamically estimated
+        "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
+        "maxFeePerGas": max_fee,
         "nonce": nonce,
         "chainId": web3.eth.chain_id,
     })
-    print(txn)
-    # Sign transaction with private key
+
+    # Sign Transaction
     signed_txn = web3.eth.account.sign_transaction(txn, private_key)
 
-    # Send transaction
+    # Send Transaction
     tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
 
-    # Wait for transaction receipt
+    # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-    print(f"Transaction successful with hash: {tx_hash.hex()}")
+
+    print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 
 def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
-    # Contract details
+    # Contract Details
     contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     abi = [
         {
@@ -379,47 +400,68 @@ def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
         },
     ]
 
-    # Load private key (DO NOT expose this in production)
-    private_key = "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824"
-    sender_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    receiver_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    amount = 1  # Amount to transfer
+    # Load Private Key Securely
+    private_key = os.getenv("AGENTKIT_PRIVATE_KEY")
+    if not private_key:
+        raise ValueError(
+            "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
-    # Create contract instance
+    # Addresses
+    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    recipient_address = address
+
+    # Amount to Transfer (1 Wei in USDC terms)
+    amount = 1  # 1 Wei of USDC
+
+    # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
-    # Get nonce
-    nonce = web3.eth.get_transaction_count(sender_address)
+    # Get Nonce (for Spender)
+    nonce = web3.eth.get_transaction_count(spender_address)
 
-    # Estimate gas price and gas limit
-    gas_price = web3.to_wei("10", "gwei")  # Adjust as needed
-    gas_limit = 100000  # Adjust based on estimated gas
+    # Estimate Gas
+    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
+        "from": spender_address
+    })
+    print(f"Estimated Gas Limit: {estimated_gas_limit}")
 
-    # Build transaction
-    txn = contract.functions.transferFrom(sender_address, receiver_address, amount).build_transaction({
-        "from": receiver_address,
-        "gas": gas_limit,
-        "gasPrice": gas_price,
+    # Get Optimal Gas Price
+    base_fee = web3.eth.gas_price
+    priority_fee = web3.to_wei("1", "gwei")  # Safe low priority fee
+    max_fee = base_fee + priority_fee  # Ensure minimal overpaying
+
+    # Build the Transaction
+    txn = contract.functions.transferFrom(
+        owner_address,
+        recipient_address,
+        amount
+    ).build_transaction({
+        "from": spender_address,
+        "gas": estimated_gas_limit,  # Dynamically estimated
+        "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
+        "maxFeePerGas": max_fee,
         "nonce": nonce,
         "chainId": web3.eth.chain_id,
     })
-    print(txn)
-    # Sign transaction with private key
+
+    # Sign Transaction
     signed_txn = web3.eth.account.sign_transaction(txn, private_key)
 
-    # Send transaction
+    # Send Transaction
     tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
 
-    # Wait for transaction receipt
+    # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-    print(f"Transaction successful with hash: {tx_hash.hex()}")
+
+    print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 
 def send_usdc_to_user(wallet: Wallet):
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
-    # Contract details
+    # Contract Details
     contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     abi = [
         {
@@ -435,40 +477,61 @@ def send_usdc_to_user(wallet: Wallet):
         },
     ]
 
-    # Load private key (DO NOT expose this in production)
-    private_key = "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824"
-    sender_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    receiver_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    amount = 1  # Amount to transfer
+    # Load Private Key Securely
+    private_key = os.getenv("AGENTKIT_PRIVATE_KEY")
+    if not private_key:
+        raise ValueError(
+            "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
-    # Create contract instance
+    # Addresses
+    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    recipient_address = address
+
+    # Amount to Transfer (1 Wei in USDC terms)
+    amount = 1  # 1 Wei of USDC
+
+    # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
-    # Get nonce
-    nonce = web3.eth.get_transaction_count(sender_address)
+    # Get Nonce (for Spender)
+    nonce = web3.eth.get_transaction_count(spender_address)
 
-    # Estimate gas price and gas limit
-    gas_price = web3.to_wei("10", "gwei")  # Adjust as needed
-    gas_limit = 100000  # Adjust based on estimated gas
+    # Estimate Gas
+    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
+        "from": spender_address
+    })
+    print(f"Estimated Gas Limit: {estimated_gas_limit}")
 
-    # Build transaction
-    txn = contract.functions.transferFrom(sender_address, receiver_address, amount).build_transaction({
-        "from": receiver_address,
-        "gas": gas_limit,
-        "gasPrice": gas_price,
+    # Get Optimal Gas Price
+    base_fee = web3.eth.gas_price
+    priority_fee = web3.to_wei("1", "gwei")  # Safe low priority fee
+    max_fee = base_fee + priority_fee  # Ensure minimal overpaying
+
+    # Build the Transaction
+    txn = contract.functions.transferFrom(
+        owner_address,
+        recipient_address,
+        amount
+    ).build_transaction({
+        "from": spender_address,
+        "gas": estimated_gas_limit,  # Dynamically estimated
+        "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
+        "maxFeePerGas": max_fee,
         "nonce": nonce,
         "chainId": web3.eth.chain_id,
     })
-    print(txn)
-    # Sign transaction with private key
+
+    # Sign Transaction
     signed_txn = web3.eth.account.sign_transaction(txn, private_key)
 
-    # Send transaction
+    # Send Transaction
     tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
 
-    # Wait for transaction receipt
+    # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-    print(f"Transaction successful with hash: {tx_hash.hex()}")
+
+    print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 # Initialize Agent
 
