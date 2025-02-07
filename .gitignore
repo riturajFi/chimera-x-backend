@@ -2,3 +2,4 @@
 /chatbot-frontend
 .env
 /Tests/sv-quickstart/node_modules
+/Tests/sv-quickstart/nillionOrgConfig.js
