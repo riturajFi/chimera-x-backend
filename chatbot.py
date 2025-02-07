@@ -333,7 +333,6 @@ def transfer_usdc_from_user(address: str):
 
 def approve_4pool_to_spend_usdc(address: str):
 
-
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -412,17 +411,16 @@ def add_liquidity_to_curve_4Pool(address: str):
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
     # Contract Details
-    contract_address = "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f"
     abi = [
         {
             "stateMutability": "nonpayable",
             "type": "function",
             "name": "add_liquidity",
             "inputs": [
-                {"name": "_amounts", type: "uint256[4]"},
-                {"name": "_min_mint_amount", type: "uint256"},
+                {"name": "_amounts", "type": "uint256[4]"},
+                {"name": "_min_mint_amount", "type": "uint256"},
             ],
-            "outputs": [{"name": "", type: "uint256"}],
+            "outputs": [{"name": "", "type": "uint256"}],
         },
     ]
 
@@ -433,7 +431,10 @@ def add_liquidity_to_curve_4Pool(address: str):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    contract_address = web3.to_checksum_address(
+        "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f")
+    spender_address = web3.to_checksum_address(
+        "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")
     _amounts = [int(50000), int(0), int(0), int(0)]
     _min_mint_amount = int("49242745402084618")
 
@@ -483,7 +484,7 @@ def withdaw_from_curve_pool(address: str):
 
     # Contract Details
     # Replace with actual 4Pool contract address
-    contract_address = "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f"
+    contract_address = web3.to_checksum_address("0xf6c5f01c7f3148891ad0e19df78743d31e390d1f")
     abi = [
         {
             "stateMutability": "nonpayable",
@@ -505,7 +506,7 @@ def withdaw_from_curve_pool(address: str):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    sender_address = "0xYourWalletAddressHere"  # Replace with your wallet address
+    sender_address =  web3.to_checksum_address("0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")  # Replace with your wallet address
 
     # Hardcoded Values (Equivalent to JavaScript)
     _burn_amount = int("2521159640395019")  # Amount to burn
@@ -582,9 +583,9 @@ def send_usdc_to_user(wallet: Wallet):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    recipient_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    owner_address = web3.to_checksum_address("0xE8e5651d0b020011FF5991B59e49fd64eeE02311")
+    spender_address = web3.to_checksum_address("0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")
+    recipient_address = web3.to_checksum_address("0xE8e5651d0b020011FF5991B59e49fd64eeE02311")
 
     # Amount to Transfer (1 Wei in USDC terms)
     amount = 1  # 1 Wei of USDC
