@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv
 import sys
 import time
 import requests
@@ -29,7 +30,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS to allow requests from the React frontend
 
 wallet_data_file = "wallet_data.txt"
-
+load_dotenv()
 # Functions Prompts
 
 SIGN_MESSAGE_PROMPT = """
@@ -58,8 +59,10 @@ This tool can propose a yield optimization
 
 STAKE_CURVE = """Use this function to stake in curve finance"""
 
+TRANSAFER_USDC_FROM_USER = """ Use this to transfer usdc of user to your own wallet"""
 
 # Inputs
+
 
 class SignMessageInput(BaseModel):
     message: str = Field(
@@ -105,6 +108,13 @@ class ProposeYieldOptimizationInput(BaseModel):
 
 class StakeCurveInput(BaseModel):
     sender_address: str = Field(
+        ...,
+        description="The sender address"
+    )
+
+
+class TrsansferUsdcFromUserInput(BaseModel):
+    address: str = Field(
         ...,
         description="The sender address"
     )
@@ -165,7 +175,7 @@ def stake_eth(amount_in_ether):
     amount_in_wei = web3.to_wei(amount_in_ether, "ether")
     staker_address = "0x7B133e5bce9552289Adb6B8a0449318De9C6C894"  # Staker's address
     # Replace with staker's private key
-    staker_private_key = "59e9715f97ca0c76be2b14bedfce5255710de1f882b83a8aea0a8f19ffe0a977"
+    staker_private_key = os.getenv("STAKER_PK")
     staking_contract_address = "0xe725fA0577e25aCdf6F8Fbd979fdd7437714d6cb"
     nonce = web3.eth.get_transaction_count(staker_address)
     staking_contract = web3.eth.contract(
@@ -214,7 +224,13 @@ def stake_curve_finance(sender_address):
     stake_curve(sender_address=sender_address)
 
 
-def transafer_usdc_from_user(wallet: Wallet):
+def transfer_usdc_from_user(address: str):
+
+    INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
+    web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+    # Contract Details
+    contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     abi = [
         {
             "stateMutability": "nonpayable",
@@ -229,20 +245,70 @@ def transafer_usdc_from_user(wallet: Wallet):
         },
     ]
 
-    invocation = wallet.invoke_contract(
-        contract_address="0x2Ce6311ddAE708829bc0784C967b7d77D19FD779",
-        abi=abi,
-        method="transferFrom",
-        args={"_from": "0x5244b38c272b1fa6Dc22034608903eA4EeBC7C2f",
-              "_to": "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404", "_value": 0.000001}
-    )
+    # Load Private Key Securely
+    private_key = os.getenv("AGENTKIT_PRIVATE_KEY")
+    if not private_key:
+        raise ValueError(
+            "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
-    invocation.wait()
-    return 0
+    # Addresses
+    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    recipient_address = address
+
+    # Amount to Transfer (1 Wei in USDC terms)
+    amount = 1  # 1 Wei of USDC
+
+    # Contract Instance
+    contract = web3.eth.contract(address=contract_address, abi=abi)
+
+    # Get Nonce (for Spender)
+    nonce = web3.eth.get_transaction_count(spender_address)
+
+    # Estimate Gas
+    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
+        "from": spender_address
+    })
+    print(f"Estimated Gas Limit: {estimated_gas_limit}")
+
+    # Get Optimal Gas Price
+    base_fee = web3.eth.gas_price
+    priority_fee = web3.to_wei("1", "gwei")  # Safe low priority fee
+    max_fee = base_fee + priority_fee  # Ensure minimal overpaying
+
+    # Build the Transaction
+    txn = contract.functions.transferFrom(
+        owner_address,
+        recipient_address,
+        amount
+    ).build_transaction({
+        "from": spender_address,
+        "gas": estimated_gas_limit,  # Dynamically estimated
+        "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
+        "maxFeePerGas": max_fee,
+        "nonce": nonce,
+        "chainId": web3.eth.chain_id,
+    })
+
+    # Sign Transaction
+    signed_txn = web3.eth.account.sign_transaction(txn, private_key)
+
+    # Send Transaction
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
+
+    # Wait for Receipt
+    receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+
+    print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 
 def add_liquidity_to_curve_4Pool(wallet: Wallet):
 
+    INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
+    web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+    # Contract details
+    contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     abi = [
         {
             "stateMutability": "nonpayable",
@@ -257,22 +323,152 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
         },
     ]
 
-    invocation = wallet.invoke_contract(
-        contract_address="0x2Ce6311ddAE708829bc0784C967b7d77D19FD779",
-        abi=abi,
-        method="transferFrom",
-        args={"_from": "0x5244b38c272b1fa6Dc22034608903eA4EeBC7C2f",
-              "_to": "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404", "_value": 0.000001}
-    )
+    # Load private key (DO NOT expose this in production)
+    private_key = "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824"
+    sender_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    receiver_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    amount = 1  # Amount to transfer
 
-    invocation.wait()
-    return 0
+    # Create contract instance
+    contract = web3.eth.contract(address=contract_address, abi=abi)
 
-def withdaw_from_curve_pool(wallet: Wallet):
-    return 0
+    # Get nonce
+    nonce = web3.eth.get_transaction_count(sender_address)
 
-def send_usdc_to_use(wallet : Wallet):
-    return 0
+    # Estimate gas price and gas limit
+    gas_price = web3.to_wei("10", "gwei")  # Adjust as needed
+    gas_limit = 100000  # Adjust based on estimated gas
+
+    # Build transaction
+    txn = contract.functions.transferFrom(sender_address, receiver_address, amount).build_transaction({
+        "from": receiver_address,
+        "gas": gas_limit,
+        "gasPrice": gas_price,
+        "nonce": nonce,
+        "chainId": web3.eth.chain_id,
+    })
+    print(txn)
+    # Sign transaction with private key
+    signed_txn = web3.eth.account.sign_transaction(txn, private_key)
+
+    # Send transaction
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
+
+    # Wait for transaction receipt
+    receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+    print(f"Transaction successful with hash: {tx_hash.hex()}")
+
+
+def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
+    INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
+    web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+    # Contract details
+    contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    abi = [
+        {
+            "stateMutability": "nonpayable",
+            "type": "function",
+            "name": "transferFrom",
+            "inputs": [
+                {"name": "_from", "type": "address"},
+                {"name": "_to", "type": "address"},
+                {"name": "_value", "type": "uint256"}
+            ],
+            "outputs": [{"name": "", "type": "bool"}]
+        },
+    ]
+
+    # Load private key (DO NOT expose this in production)
+    private_key = "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824"
+    sender_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    receiver_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    amount = 1  # Amount to transfer
+
+    # Create contract instance
+    contract = web3.eth.contract(address=contract_address, abi=abi)
+
+    # Get nonce
+    nonce = web3.eth.get_transaction_count(sender_address)
+
+    # Estimate gas price and gas limit
+    gas_price = web3.to_wei("10", "gwei")  # Adjust as needed
+    gas_limit = 100000  # Adjust based on estimated gas
+
+    # Build transaction
+    txn = contract.functions.transferFrom(sender_address, receiver_address, amount).build_transaction({
+        "from": receiver_address,
+        "gas": gas_limit,
+        "gasPrice": gas_price,
+        "nonce": nonce,
+        "chainId": web3.eth.chain_id,
+    })
+    print(txn)
+    # Sign transaction with private key
+    signed_txn = web3.eth.account.sign_transaction(txn, private_key)
+
+    # Send transaction
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
+
+    # Wait for transaction receipt
+    receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+    print(f"Transaction successful with hash: {tx_hash.hex()}")
+
+
+def send_usdc_to_user(wallet: Wallet):
+    INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
+    web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+    # Contract details
+    contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    abi = [
+        {
+            "stateMutability": "nonpayable",
+            "type": "function",
+            "name": "transferFrom",
+            "inputs": [
+                {"name": "_from", "type": "address"},
+                {"name": "_to", "type": "address"},
+                {"name": "_value", "type": "uint256"}
+            ],
+            "outputs": [{"name": "", "type": "bool"}]
+        },
+    ]
+
+    # Load private key (DO NOT expose this in production)
+    private_key = "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824"
+    sender_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
+    receiver_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    amount = 1  # Amount to transfer
+
+    # Create contract instance
+    contract = web3.eth.contract(address=contract_address, abi=abi)
+
+    # Get nonce
+    nonce = web3.eth.get_transaction_count(sender_address)
+
+    # Estimate gas price and gas limit
+    gas_price = web3.to_wei("10", "gwei")  # Adjust as needed
+    gas_limit = 100000  # Adjust based on estimated gas
+
+    # Build transaction
+    txn = contract.functions.transferFrom(sender_address, receiver_address, amount).build_transaction({
+        "from": receiver_address,
+        "gas": gas_limit,
+        "gasPrice": gas_price,
+        "nonce": nonce,
+        "chainId": web3.eth.chain_id,
+    })
+    print(txn)
+    # Sign transaction with private key
+    signed_txn = web3.eth.account.sign_transaction(txn, private_key)
+
+    # Send transaction
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
+
+    # Wait for transaction receipt
+    receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+    print(f"Transaction successful with hash: {tx_hash.hex()}")
 
 # Initialize Agent
 
@@ -295,7 +491,6 @@ def initialize_agent():
         values = {"cdp_wallet_data": wallet_data}
         wallet_dict = json.loads(values["cdp_wallet_data"])
     agentkit = CdpAgentkitWrapper(**values)
-    print(agentkit)
     # persist the agent's CDP MPC Wallet Data.
     wallet_data = agentkit.export_wallet()
     with open(wallet_data_file, "w") as f:
@@ -353,12 +548,21 @@ def initialize_agent():
         func=stake_curve_finance
     )
 
+    transafer_usdc_from_user_tool = CdpTool(
+        name="transafer_usdc_from_user",
+        description=TRANSAFER_USDC_FROM_USER,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=TrsansferUsdcFromUserInput,
+        func=transfer_usdc_from_user
+    )
+
     tools.append(signMessageTool)
     tools.append(addMonitoringTermTool)
     tools.append(stake_eth_tool)
     tools.append(check_pool_balance_tool)
     tools.append(propose_yeild_opt_tool)
     tools.append(stake_curve_tool)
+    tools.append(transafer_usdc_from_user_tool)
 
     # Store buffered conversation history in memory.
     memory = MemorySaver()
@@ -382,6 +586,7 @@ def initialize_agent():
             "responses. Refrain from restating your tools' descriptions unless it is explicitly requested. You can also add terms for monitoring using an API call to localhost"
             "You can also call a function on a staking platform with some eth on a staking protocol using the call_function method"
             "You can also claim airdrop. For this, call the call_airdrop function"
+            "You can transfer USDC from user. To do so, invoke the transer_usdc_from_user function"
             "You can als Check Pool balance across AAVE, CURVE and LIDO. Give response regarding the balances strictly as : The balance details for the address `0xcE674EED84af71CFb5540d764fF5047a183eaA9d` are as follows"
             "You can propose yield optmization. For proposing yield optmiziation, call the propose_yeild_opt_tool. You should call the check_pool_balances if it is not called before"
             "You can also stake in curve finance by calling stake_curve_finance function with requried wallet address as input to sender_address"
@@ -406,9 +611,10 @@ def chat():
         {"messages": [HumanMessage(content=user_message)]}, config
     ):
         if "agent" in chunk:
-
+            print(chunk["agent"]["messages"][0].content)
             agent_response += (chunk["agent"]["messages"][0].content)
         elif "tools" in chunk:
+            print(chunk["tools"]["messages"][0].content)
             tool_response += (chunk["tools"]["messages"][0].content)
     return jsonify({"response": agent_response, "tool_response": tool_response})
 
