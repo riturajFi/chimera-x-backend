@@ -333,7 +333,6 @@ def transfer_usdc_from_user(address: str):
 
 def approve_4pool_to_spend_usdc(address: str):
 
-    load_dotenv()  # Load environment variables from .env file
 
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
