@@ -60,6 +60,10 @@ This tool can propose a yield optimization
 STAKE_CURVE = """Use this function to stake in curve finance"""
 
 TRANSAFER_USDC_FROM_USER = """ Use this to transfer usdc of user to your own wallet"""
+APPROVE_4POOL_TO_SPEND_USDC_PROMPT = """This tool approves the 4Pool contract to spend the user's USDC."""
+ADD_LIQUIDITY_TO_CURVE_4POOL_PROMPT = """This tool adds liquidity to Curve's 4Pool contract."""
+WITHDRAW_FROM_CURVE_POOL_PROMPT = """This tool withdraws liquidity from Curve's 4Pool contract."""
+SEND_USDC_TO_USER_PROMPT = """This tool sends USDC from the agent's wallet to the specified user address."""
 
 # Inputs
 
@@ -118,6 +122,31 @@ class TrsansferUsdcFromUserInput(BaseModel):
         ...,
         description="The sender address"
     )
+
+
+class ClaimAirdropInput(BaseModel):
+    address: str = Field(...,
+                         description="The address to claim the airdrop. e.g. `0xabxcd`")
+
+
+class Approve4PoolSpendUSDCInput(BaseModel):
+    address: str = Field(...,
+                         description="The user's address approving USDC spend.")
+
+
+class AddLiquidityToCurve4PoolInput(BaseModel):
+    address: str = Field(...,
+                         description="The user's address adding liquidity to Curve 4Pool.")
+
+
+class WithdrawFromCurvePoolInput(BaseModel):
+    address: str = Field(
+        ..., description="The user's address withdrawing liquidity from Curve 4Pool.")
+
+
+class SendUSDCToUserInput(BaseModel):
+    address: str = Field(...,
+                         description="The recipient's address to send USDC to.")
 
 
 def sign_message(wallet: Wallet, message: str) -> str:
@@ -689,6 +718,38 @@ def initialize_agent():
         func=transfer_usdc_from_user
     )
 
+    approve_4pool_to_spend_usdc_tool = CdpTool(
+        name="approve_4pool_to_spend_usdc",
+        description=APPROVE_4POOL_TO_SPEND_USDC_PROMPT,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=Approve4PoolSpendUSDCInput,
+        func=approve_4pool_to_spend_usdc,
+    )
+
+    add_liquidity_to_curve_4Pool_tool = CdpTool(
+        name="add_liquidity_to_curve_4pool",
+        description=ADD_LIQUIDITY_TO_CURVE_4POOL_PROMPT,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=AddLiquidityToCurve4PoolInput,
+        func=add_liquidity_to_curve_4Pool,
+    )
+
+    withdraw_from_curve_pool_tool = CdpTool(
+        name="withdraw_from_curve_pool",
+        description=WITHDRAW_FROM_CURVE_POOL_PROMPT,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=WithdrawFromCurvePoolInput,
+        func=withdaw_from_curve_pool,
+    )
+
+    send_usdc_to_user_tool = CdpTool(
+        name="send_usdc_to_user",
+        description=SEND_USDC_TO_USER_PROMPT,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=SendUSDCToUserInput,
+        func=send_usdc_to_user,
+    )
+
     tools.append(signMessageTool)
     tools.append(addMonitoringTermTool)
     tools.append(stake_eth_tool)
@@ -696,6 +757,12 @@ def initialize_agent():
     tools.append(propose_yeild_opt_tool)
     tools.append(stake_curve_tool)
     tools.append(transafer_usdc_from_user_tool)
+    tools.extend([
+        approve_4pool_to_spend_usdc_tool,
+        add_liquidity_to_curve_4Pool_tool,
+        withdraw_from_curve_pool_tool,
+        send_usdc_to_user_tool
+    ])
 
     # Store buffered conversation history in memory.
     memory = MemorySaver()
