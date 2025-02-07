@@ -584,7 +584,7 @@ def send_usdc_to_user(wallet: Wallet):
     # Addresses
     owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
     spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    recipient_address = address
+    recipient_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
 
     # Amount to Transfer (1 Wei in USDC terms)
     amount = 1  # 1 Wei of USDC
@@ -596,7 +596,7 @@ def send_usdc_to_user(wallet: Wallet):
     nonce = web3.eth.get_transaction_count(spender_address)
 
     # Estimate Gas
-    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
+    estimated_gas_limit = contract.functions.transferFrom(spender_address, recipient_address, amount).estimate_gas({
         "from": spender_address
     })
     print(f"Estimated Gas Limit: {estimated_gas_limit}")
