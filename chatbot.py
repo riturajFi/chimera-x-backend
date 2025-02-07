@@ -302,22 +302,24 @@ def transfer_usdc_from_user(address: str):
     print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 
-def add_liquidity_to_curve_4Pool(wallet: Wallet):
+def approve_4pool_to_spend_usdc(address: str):
+
+    load_dotenv()  # Load environment variables from .env file
 
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
     # Contract Details
-    contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    # Replace with actual USDC contract address
+    USDC_contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     abi = [
         {
             "stateMutability": "nonpayable",
             "type": "function",
-            "name": "transferFrom",
+            "name": "approve",
             "inputs": [
-                {"name": "_from", "type": "address"},
-                {"name": "_to", "type": "address"},
-                {"name": "_value", "type": "uint256"}
+                {"name": "spender", "type": "address"},
+                {"name": "value", "type": "uint256"}
             ],
             "outputs": [{"name": "", "type": "bool"}]
         },
@@ -330,12 +332,82 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    recipient_address = address
+    # Replace with your wallet address
+    owner_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    spender_address = "0xf6C5F01C7F3148891ad0e19DF78743D31E390D1f"
+    max_approval_amount = int(
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+    )  # Maximum uint256 value
 
-    # Amount to Transfer (1 Wei in USDC terms)
-    amount = 1  # 1 Wei of USDC
+    # Contract Instance
+    contract = web3.eth.contract(address=USDC_contract_address, abi=abi)
+
+    # Get Nonce (for Owner)
+    nonce = web3.eth.get_transaction_count(owner_address)
+
+    # Estimate Gas
+    estimated_gas_limit = contract.functions.approve(spender_address, max_approval_amount).estimate_gas({
+        "from": owner_address
+    })
+    print(f"Estimated Gas Limit: {estimated_gas_limit}")
+
+    # Get Optimal Gas Price
+    base_fee = web3.eth.gas_price
+    priority_fee = web3.to_wei("1", "gwei")  # Safe low priority fee
+    max_fee = base_fee + priority_fee  # Ensure minimal overpaying
+
+    # Build the Transaction
+    txn = contract.functions.approve(spender_address, max_approval_amount).build_transaction({
+        "from": owner_address,
+        "gas": estimated_gas_limit,  # Dynamically estimated
+        "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
+        "maxFeePerGas": max_fee,
+        "nonce": nonce,
+        "chainId": web3.eth.chain_id,
+    })
+
+    # Sign Transaction
+    signed_txn = web3.eth.account.sign_transaction(txn, private_key)
+
+    # Send Transaction
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+
+    # Wait for Receipt
+    receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+
+    print(f"Approval successful! Tx Hash: {tx_hash.hex()}")
+
+
+def add_liquidity_to_curve_4Pool(address: str):
+
+    INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
+    web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+    # Contract Details
+    contract_address = "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f"
+    abi = [
+        {
+            "stateMutability": "nonpayable",
+            "type": "function",
+            "name": "add_liquidity",
+            "inputs": [
+                {"name": "_amounts", type: "uint256[4]"},
+                {"name": "_min_mint_amount", type: "uint256"},
+            ],
+            "outputs": [{"name": "", type: "uint256"}],
+        },
+    ]
+
+    # Load Private Key Securely
+    private_key = os.getenv("AGENTKIT_PRIVATE_KEY")
+    if not private_key:
+        raise ValueError(
+            "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
+
+    # Addresses
+    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    _amounts = [int(50000), int(0), int(0), int(0)]
+    _min_mint_amount = int("49242745402084618")
 
     # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
@@ -344,7 +416,7 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
     nonce = web3.eth.get_transaction_count(spender_address)
 
     # Estimate Gas
-    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
+    estimated_gas_limit = contract.functions.add_liquidity(_amounts, _min_mint_amount).estimate_gas({
         "from": spender_address
     })
     print(f"Estimated Gas Limit: {estimated_gas_limit}")
@@ -355,11 +427,7 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
     max_fee = base_fee + priority_fee  # Ensure minimal overpaying
 
     # Build the Transaction
-    txn = contract.functions.transferFrom(
-        owner_address,
-        recipient_address,
-        amount
-    ).build_transaction({
+    txn = contract.functions.add_liquidity(_amounts, _min_mint_amount).build_transaction({
         "from": spender_address,
         "gas": estimated_gas_limit,  # Dynamically estimated
         "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
@@ -380,23 +448,25 @@ def add_liquidity_to_curve_4Pool(wallet: Wallet):
     print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 
-def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
+def withdaw_from_curve_pool(address: str):
+
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
     # Contract Details
-    contract_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    # Replace with actual 4Pool contract address
+    contract_address = "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f"
     abi = [
         {
             "stateMutability": "nonpayable",
             "type": "function",
-            "name": "transferFrom",
+            "name": "remove_liquidity_one_coin",
             "inputs": [
-                {"name": "_from", "type": "address"},
-                {"name": "_to", "type": "address"},
-                {"name": "_value", "type": "uint256"}
+                {"name": "_burn_amount", "type": "uint256"},
+                {"name": "i", "type": "int128"},
+                {"name": "_min_received", "type": "uint256"},
             ],
-            "outputs": [{"name": "", "type": "bool"}]
+            "outputs": [{"name": "", "type": "uint256"}]
         },
     ]
 
@@ -407,22 +477,24 @@ def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
-    recipient_address = address
+    sender_address = "0xYourWalletAddressHere"  # Replace with your wallet address
 
-    # Amount to Transfer (1 Wei in USDC terms)
-    amount = 1  # 1 Wei of USDC
+    # Hardcoded Values (Equivalent to JavaScript)
+    _burn_amount = int("2521159640395019")  # Amount to burn
+    i = 0  # Index of the token
+    _min_received = int(2557)  # Minimum tokens to receive
 
     # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
-    # Get Nonce (for Spender)
-    nonce = web3.eth.get_transaction_count(spender_address)
+    # Get Nonce
+    nonce = web3.eth.get_transaction_count(sender_address)
 
     # Estimate Gas
-    estimated_gas_limit = contract.functions.transferFrom(owner_address, recipient_address, amount).estimate_gas({
-        "from": spender_address
+    estimated_gas_limit = contract.functions.remove_liquidity_one_coin(
+        _burn_amount, i, _min_received
+    ).estimate_gas({
+        "from": sender_address
     })
     print(f"Estimated Gas Limit: {estimated_gas_limit}")
 
@@ -432,12 +504,10 @@ def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
     max_fee = base_fee + priority_fee  # Ensure minimal overpaying
 
     # Build the Transaction
-    txn = contract.functions.transferFrom(
-        owner_address,
-        recipient_address,
-        amount
+    txn = contract.functions.remove_liquidity_one_coin(
+        _burn_amount, i, _min_received
     ).build_transaction({
-        "from": spender_address,
+        "from": sender_address,
         "gas": estimated_gas_limit,  # Dynamically estimated
         "maxPriorityFeePerGas": priority_fee,  # EIP-1559 dynamic fee
         "maxFeePerGas": max_fee,
@@ -449,12 +519,12 @@ def withdaw_from_curve_pool_and_send_to_user(wallet: Wallet):
     signed_txn = web3.eth.account.sign_transaction(txn, private_key)
 
     # Send Transaction
-    tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
+    tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
     # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    print(f"Transaction successful! Hash: {tx_hash.hex()}")
+    print(f"Liquidity Removed Successfully! Tx Hash: {tx_hash.hex()}")
 
 
 def send_usdc_to_user(wallet: Wallet):
