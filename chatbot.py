@@ -114,11 +114,6 @@ class ProposeYieldOptimizationInput(BaseModel):
         description="The dummy address"
     )
 
-# class ProposeYieldOptimizationInput(BaseModel):
-#     balance: str = Field(
-#         ...,
-#         description="The dummy address"
-#     )
 
 class StakeCurveInput(BaseModel):
     sender_address: str = Field(
@@ -158,10 +153,18 @@ class SendUSDCToUserInput(BaseModel):
     address: str = Field(...,
                          description="The recipient's address to send USDC to.")
 
+
 class GetBalanceUSDCEthforAddress(BaseModel):
     address: str = Field(...,
                          description="The recipient's address to send USDC to.")
 
+
+class ProposeYieldDistribution(BaseModel):
+    balance: int = Field(...,
+                         description="The recipient's address to send USDC to.")
+
+
+# Functions
 
 def sign_message(wallet: Wallet, message: str) -> str:
     """Sign message using EIP-191 message hash from the wallet.
@@ -178,6 +181,7 @@ def sign_message(wallet: Wallet, message: str) -> str:
 
     return f"The payload signature {payload_signature}"
 
+
 def get_balances_eth_usdc(address: str):
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
@@ -190,7 +194,9 @@ def get_balances_eth_usdc(address: str):
     eth_balance = web3.from_wei(eth_balance_wei, 'ether')
 
     # USDC Contract Details (Base Mainnet)
-    USDC_CONTRACT_ADDRESS = web3.to_checksum_address("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")  # Replace with actual Base USDC contract address
+    # Replace with actual Base USDC contract address
+    USDC_CONTRACT_ADDRESS = web3.to_checksum_address(
+        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
     USDC_ABI = [
         {
             "stateMutability": "view",
@@ -201,8 +207,9 @@ def get_balances_eth_usdc(address: str):
         }
     ]
 
-    usdc_contract = web3.eth.contract(address=USDC_CONTRACT_ADDRESS, abi=USDC_ABI)
-    
+    usdc_contract = web3.eth.contract(
+        address=USDC_CONTRACT_ADDRESS, abi=USDC_ABI)
+
     # Fetch USDC balance
     usdc_balance_wei = usdc_contract.functions.balanceOf(address).call()
     usdc_balance = usdc_balance_wei / (10**6)  # USDC has 6 decimal places
@@ -211,6 +218,7 @@ def get_balances_eth_usdc(address: str):
         "ETH Balance": f"{eth_balance} ETH",
         "USDC Balance": f"{usdc_balance} USDC"
     }
+
 
 def call_add_monitor_term(term):
 
@@ -295,8 +303,9 @@ def proposeYieldOptimization(address):
 
     return yield_opt_risk_profiles(data=pool_balance_data, risk_profile="stable")
 
+
 def propose_yield_distribution(balance):
-    return yield_opt_allocation(balance)
+    return yield_opt_allocation(0.569851, risk_profile="stable")
 
 
 def stake_curve_finance(sender_address):
@@ -534,7 +543,8 @@ def withdaw_from_curve_pool(address: str):
 
     # Contract Details
     # Replace with actual 4Pool contract address
-    contract_address = web3.to_checksum_address("0xf6c5f01c7f3148891ad0e19df78743d31e390d1f")
+    contract_address = web3.to_checksum_address(
+        "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f")
     abi = [
         {
             "stateMutability": "nonpayable",
@@ -556,7 +566,8 @@ def withdaw_from_curve_pool(address: str):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    sender_address =  web3.to_checksum_address("0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")  # Replace with your wallet address
+    sender_address = web3.to_checksum_address(
+        "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")  # Replace with your wallet address
 
     # Hardcoded Values (Equivalent to JavaScript)
     _burn_amount = int("2521159640395019")  # Amount to burn
@@ -633,9 +644,12 @@ def send_usdc_to_user(wallet: Wallet):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    owner_address = web3.to_checksum_address("0xE8e5651d0b020011FF5991B59e49fd64eeE02311")
-    spender_address = web3.to_checksum_address("0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")
-    recipient_address = web3.to_checksum_address("0xE8e5651d0b020011FF5991B59e49fd64eeE02311")
+    owner_address = web3.to_checksum_address(
+        "0xE8e5651d0b020011FF5991B59e49fd64eeE02311")
+    spender_address = web3.to_checksum_address(
+        "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")
+    recipient_address = web3.to_checksum_address(
+        "0xE8e5651d0b020011FF5991B59e49fd64eeE02311")
 
     # Amount to Transfer (1 Wei in USDC terms)
     amount = 1  # 1 Wei of USDC
@@ -681,6 +695,7 @@ def send_usdc_to_user(wallet: Wallet):
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
     print(f"Transaction successful! Hash: {tx_hash.hex()}")
+
 
 def activateMonitoringPool():
     api_url = "http://localhost:3000/api/start-monitor"
@@ -761,6 +776,14 @@ def initialize_agent():
         func=proposeYieldOptimization
     )
 
+    propose_yield_dist_tool = CdpTool(
+        name="propose_yield_dist_tool",
+        description=PROPOSE_YIELD_DISTRIBUTION,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=ProposeYieldDistribution,
+        func=propose_yield_distribution
+    )
+
     stake_curve_tool = CdpTool(
         name="stake_curve_finance",
         description=STAKE_CURVE,
@@ -817,7 +840,6 @@ def initialize_agent():
         func=get_balances_eth_usdc,
     )
 
-
     tools.append(signMessageTool)
     tools.append(addMonitoringTermTool)
     tools.append(stake_eth_tool)
@@ -830,7 +852,7 @@ def initialize_agent():
         add_liquidity_to_curve_4Pool_tool,
         withdraw_from_curve_pool_tool,
         send_usdc_to_user_tool,
-        get_balances_eth_usdc_tool
+        get_balances_eth_usdc_tool, propose_yield_dist_tool
     ])
     # Store buffered conversation history in memory.
     memory = MemorySaver()
@@ -866,6 +888,7 @@ def initialize_agent():
                     3. stake in 4pool
                     4. Monitor Balance for specified time
             """
+            """When asked for yield distrubtion, call the propose yield distribution with USDC value of your wallet address"""
             "When asked to fund a wallet, give the following answer : Please click the following button to fund your wallet. Do not call any function or anyhting extra reply"
             "When asked about how to grow my tokens or ocrypto, reply with : One of the ways to grow your crypto is to stake them in yield generating strategies. Then tell the user a little about yield and cruve finance"
         ),
