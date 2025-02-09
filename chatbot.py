@@ -393,7 +393,7 @@ def transfer_usdc_from_user(address: str):
     # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    print(f"Trasnfered USDC from user to agent : {receipt.__hash__}")
+    print(f"Trasnfered USDC from user to agent : {receipt}")
 
 
 def approve_4pool_to_spend_usdc(address: str):
@@ -505,8 +505,40 @@ def add_liquidity_to_curve_4Pool(address: str):
     spender_address = web3.to_checksum_address(
         "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")
     _amounts = [int(200000), int(0), int(0), int(0)]
-    _min_mint_amount = int("19706082006496912")
+    _amounts = [int(200000), int(0), int(0), int(0)]  # USDC deposit
+    _is_deposit = True  # Boolean flag for deposit
 
+    # ✅ ABI Definitions
+    ABI = [
+        {
+            "stateMutability": "nonpayable",
+            "type": "function",
+            "name": "add_liquidity",
+            "inputs": [
+                {"name": "_amounts", "type": "uint256[4]"},
+                {"name": "_min_mint_amount", "type": "uint256"},
+            ],
+            "outputs": [{"name": "", "type": "uint256"}],
+        },
+        {
+            "stateMutability": "view",
+            "type": "function",
+            "name": "calc_token_amount",
+            "inputs": [
+                {"name": "_amounts", "type": "uint256[4]"},
+                {"name": "_is_deposit", "type": "bool"},
+            ],
+            "outputs": [{"name": "", "type": "uint256"}],
+        },
+    ]
+
+    # ✅ Contract Instance
+    contract = web3.eth.contract(address=contract_address, abi=ABI)
+
+    # ✅ Calculate `_min_mint_amount` dynamically
+    _min_mint_amount = contract.functions.calc_token_amount(
+        _amounts, _is_deposit).call()
+    print(_min_mint_amount)
     # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
@@ -514,7 +546,7 @@ def add_liquidity_to_curve_4Pool(address: str):
     nonce = web3.eth.get_transaction_count(spender_address)
 
     # Estimate Gas
-    estimated_gas_limit = contract.functions.add_liquidity(_amounts, _min_mint_amount).estimate_gas({
+    estimated_gas_limit = contract.functions.add_liquidity(_amounts, int(_min_mint_amount * 0.99)).estimate_gas({
         "from": spender_address
     })
     print(f"Estimated Gas Limit: {estimated_gas_limit}")
