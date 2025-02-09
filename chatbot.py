@@ -64,6 +64,8 @@ APPROVE_4POOL_TO_SPEND_USDC_PROMPT = """This tool approves the 4Pool contract to
 ADD_LIQUIDITY_TO_CURVE_4POOL_PROMPT = """This tool adds liquidity to Curve's 4Pool contract."""
 WITHDRAW_FROM_CURVE_POOL_PROMPT = """This tool withdraws liquidity from Curve's 4Pool contract."""
 SEND_USDC_TO_USER_PROMPT = """This tool sends USDC from the agent's wallet to the specified user address."""
+GET_USDC_ETH_BALANCE_OF_ADDRESS = """This tool fetched usdc and eth balances of the specified user address."""
+
 
 # Inputs
 
@@ -148,6 +150,10 @@ class SendUSDCToUserInput(BaseModel):
     address: str = Field(...,
                          description="The recipient's address to send USDC to.")
 
+class GetBalanceUSDCEthforAddress(BaseModel):
+    address: str = Field(...,
+                         description="The recipient's address to send USDC to.")
+
 
 def sign_message(wallet: Wallet, message: str) -> str:
     """Sign message using EIP-191 message hash from the wallet.
@@ -164,6 +170,39 @@ def sign_message(wallet: Wallet, message: str) -> str:
 
     return f"The payload signature {payload_signature}"
 
+def get_balances_eth_usdc(address: str):
+    INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
+    web3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+    # Convert address to checksum format
+    address = web3.to_checksum_address(address)
+
+    # Fetch ETH balance
+    eth_balance_wei = web3.eth.get_balance(address)
+    eth_balance = web3.from_wei(eth_balance_wei, 'ether')
+
+    # USDC Contract Details (Base Mainnet)
+    USDC_CONTRACT_ADDRESS = web3.to_checksum_address("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")  # Replace with actual Base USDC contract address
+    USDC_ABI = [
+        {
+            "stateMutability": "view",
+            "type": "function",
+            "name": "balanceOf",
+            "inputs": [{"name": "arg0", "type": "address"}],
+            "outputs": [{"name": "", "type": "uint256"}],
+        }
+    ]
+
+    usdc_contract = web3.eth.contract(address=USDC_CONTRACT_ADDRESS, abi=USDC_ABI)
+    
+    # Fetch USDC balance
+    usdc_balance_wei = usdc_contract.functions.balanceOf(address).call()
+    usdc_balance = usdc_balance_wei / (10**6)  # USDC has 6 decimal places
+
+    return {
+        "ETH Balance": f"{eth_balance} ETH",
+        "USDC Balance": f"{usdc_balance} USDC"
+    }
 
 def call_add_monitor_term(term):
 
@@ -750,6 +789,15 @@ def initialize_agent():
         func=send_usdc_to_user,
     )
 
+    get_balances_eth_usdc_tool = CdpTool(
+        name="get_balances_eth_usdc",
+        description=GET_USDC_ETH_BALANCE_OF_ADDRESS,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=GetBalanceUSDCEthforAddress,
+        func=get_balances_eth_usdc,
+    )
+
+
     tools.append(signMessageTool)
     tools.append(addMonitoringTermTool)
     tools.append(stake_eth_tool)
@@ -761,9 +809,9 @@ def initialize_agent():
         approve_4pool_to_spend_usdc_tool,
         add_liquidity_to_curve_4Pool_tool,
         withdraw_from_curve_pool_tool,
-        send_usdc_to_user_tool
+        send_usdc_to_user_tool,
+        get_balances_eth_usdc_tool
     ])
-
     # Store buffered conversation history in memory.
     memory = MemorySaver()
     config = {"configurable": {"thread_id": "CDP Agentkit Chatbot Example!"}}
@@ -790,7 +838,10 @@ def initialize_agent():
             "You can als Check Pool balance across AAVE, CURVE and LIDO. Give response regarding the balances strictly as : The balance details for the address `0xcE674EED84af71CFb5540d764fF5047a183eaA9d` are as follows"
             "You can propose yield optmization. For proposing yield optmiziation, call the propose_yeild_opt_tool. You should call the check_pool_balances if it is not called before"
             "You can also stake in curve finance by calling stake_curve_finance function with requried wallet address as input to sender_address"
+            "When you are asked by the user to find the balances of a given address, call the get_balances_eth_usdc_tool with input as the input address"
             "When asked for executing transaction based on yield optimization is proposed, ie after you call the Yeild optimization function, if the User says to execute the transactions, then ask them for approving the use of USDC by replying specifically : Please approve USDC Spend limit amount. The amount here is specified by the user. If not then ask them for the amount"
+            "When asked to fund a wallet, give the following answer : Please click the following button to fund your wallet. Do not call any function or anyhting extra reply"
+            "When asked about how to grow my tokens or ocrypto, reply with : One of the ways to grow your crypto is to stake them in yield generating strategies. Then tell the user a little about yield and cruve finance"
         ),
     ), config
 
