@@ -1,5 +1,8 @@
 const { yieldOptRiskProfiles } = require("./rebalance");
 const express = require("express");
+require("dotenv").config();
+const { ethers } = require("ethers");
+
 const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -28,7 +31,66 @@ const readBalances = () => {
   }
 };
 
+const withdraw4Pool = async () => {
+  const PRIVATE_KEY = process.env.PRIVATE_KEY;
+
+  // ✅ Replace with your preferred Ethereum RPC URL (Infura, Alchemy, Ankr, etc.)
+  const RPC_URL =
+    "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4";
+
+  const _4pool_deposit_contract_proxy_address =
+    "0xf6C5F01C7F3148891ad0e19DF78743D31E390D1f";
+  const _4POOL_DEPOSIT_ABI = [
+    {
+      stateMutability: "nonpayable",
+      type: "function",
+      name: "remove_liquidity_one_coin",
+      inputs: [
+        { name: "_burn_amount", type: "uint256" },
+        { name: "i", type: "int128" },
+        { name: "_min_received", type: "uint256" },
+      ],
+      outputs: [{ name: "", type: "uint256" }],
+    },
+  ];
+
+  try {
+    // 1️⃣ Connect to the Ethereum provider (without MetaMask)
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+
+    // 2️⃣ Create a wallet from the private key
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+
+    // 3️⃣ Connect the wallet to the contract
+    const contract = new ethers.Contract(
+      _4pool_deposit_contract_proxy_address,
+      _4POOL_DEPOSIT_ABI,
+      wallet
+    );
+
+    // 4️⃣ Define transaction parameters
+    const _burn_amount = BigInt("60000000000000000"); // 0.045 ETH in wei
+    const i = 0; // Index of the token
+    const _min_received = BigInt(60857); // Minimum tokens received
+
+    // 5️⃣ Call the contract function
+    const tx = await contract.remove_liquidity_one_coin(
+      _burn_amount,
+      i,
+      _min_received
+    );
+
+    console.log(`Transaction Sent! Tx Hash: ${tx.hash}`);
+
+    await tx.wait(); // Wait for confirmation
+    console.log("✅ Liquidity Removed Successfully!");
+  } catch (error) {
+    console.error("❌ Transaction failed:", error);
+  }
+};
+
 // Endpoint to start monitoring
+
 app.get("/api/start-monitor", (req, res) => {
   const totalMonitoringTime = parseInt(req.query.total_monitoring_time, 10);
   if (isNaN(totalMonitoringTime) || totalMonitoringTime <= 0) {
@@ -49,7 +111,9 @@ app.get("/api/start-monitor", (req, res) => {
     const currentData = readPoolData();
     if (JSON.stringify(currentData) !== JSON.stringify(initialData)) {
       const result = JSON.parse(yieldOptRiskProfiles(readBalances())); // Parse JSON result
-      console.log(result.change);
+
+      withdraw4Pool();
+
       initialData = currentData; // Update reference data to avoid duplicate detection
     }
     if (Date.now() - startTime >= totalMonitoringTime * 1000) {

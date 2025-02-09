@@ -183,6 +183,7 @@ def sign_message(wallet: Wallet, message: str) -> str:
 
 
 def get_balances_eth_usdc(address: str):
+    print("called get_balances_eth_usdc")
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -234,6 +235,7 @@ def call_add_monitor_term(term):
 
 
 def checkPoolBalance_agent(address):
+    print("Called checkPoolBalance_agent")
     filename = "pool_balances.json"
     pool_balances_raw = get_balances(wallet_address=address)
     print(pool_balances_raw)
@@ -242,7 +244,6 @@ def checkPoolBalance_agent(address):
         pool_balances_raw, str) else pool_balances_raw
     with open(filename, "w") as json_file:
         json.dump(pool_balances, json_file, indent=4)
-    print("Hit")
     return pool_balances
 
 # Stake function
@@ -305,15 +306,20 @@ def proposeYieldOptimization(address):
 
 
 def propose_yield_distribution(balance):
-    return yield_opt_allocation(0.569851, risk_profile="stable")
+
+    print("Called Propese yield")
+    result = yield_opt_allocation(0.569851, risk_profile="stable")
+    print(result)
+    return result
 
 
 def stake_curve_finance(sender_address):
+    print("Called stake curve")
     stake_curve(sender_address=sender_address)
 
 
 def transfer_usdc_from_user(address: str):
-
+    print("call transfer_usdc_from_user")
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -341,11 +347,11 @@ def transfer_usdc_from_user(address: str):
 
     # Addresses
     owner_address = "0x8e003462E1e3F711533955B9B581732e98ACc139"
-    spender_address = "0x5244b38c272b1fa6Dc22034608903eA4EeBC7C2f"
-    recipient_address = address
+    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    recipient_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
 
     # Amount to Transfer (1 Wei in USDC terms)
-    amount = 1  # 1 Wei of USDC
+    amount = 284925  # 1 Wei of USDC
 
     # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
@@ -387,11 +393,11 @@ def transfer_usdc_from_user(address: str):
     # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    print(f"Transaction successful! Hash: {tx_hash.hex()}")
+    print(f"Trasnfered USDC from user to agent : {receipt.__hash__}")
 
 
 def approve_4pool_to_spend_usdc(address: str):
-
+    print("Called apprive 4pool")
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -466,6 +472,10 @@ def approve_4pool_to_spend_usdc(address: str):
 
 def add_liquidity_to_curve_4Pool(address: str):
 
+    print("called add_liquidity_to_curve_4Pool")
+
+    transfer_usdc_from_user("0x8e003462E1e3F711533955B9B581732e98ACc139")
+
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -494,8 +504,8 @@ def add_liquidity_to_curve_4Pool(address: str):
         "0xf6c5f01c7f3148891ad0e19df78743d31e390d1f")
     spender_address = web3.to_checksum_address(
         "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404")
-    _amounts = [int(50000), int(0), int(0), int(0)]
-    _min_mint_amount = int("49242745402084618")
+    _amounts = [int(200000), int(0), int(0), int(0)]
+    _min_mint_amount = int("19706082006496912")
 
     # Contract Instance
     contract = web3.eth.contract(address=contract_address, abi=abi)
@@ -533,11 +543,11 @@ def add_liquidity_to_curve_4Pool(address: str):
     # Wait for Receipt
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
-    print(f"Transaction successful! Hash: {tx_hash.hex()}")
+    print(f"Syccess add_liquidity_to_curve_4Pool! Hash: {tx_hash.hex()}")
 
 
 def withdaw_from_curve_pool(address: str):
-
+    print("Called withdaw_from_curve_pool")
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -618,6 +628,7 @@ def withdaw_from_curve_pool(address: str):
 
 
 def send_usdc_to_user(wallet: Wallet):
+    print("Called send_usdc_to_user")
     INFURA_URL = "https://base-mainnet.infura.io/v3/50b156a9977746479bc5f3f748348ac4"
     web3 = Web3(Web3.HTTPProvider(INFURA_URL))
 
@@ -697,14 +708,26 @@ def send_usdc_to_user(wallet: Wallet):
     print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
 
-def activateMonitoringPool():
-    api_url = "http://localhost:3000/api/start-monitor"
+class START_MONITOR_INP(BaseModel):
+    sender_address: str = Field(
+        ...,
+        description="The sender address"
+    )
+
+
+START_MONITOR_DES = """start monitoring pool"""
+
+
+def activateMonitoringPool(sender_address):
+    print("Called activateMonitoringPool")
+    api_url = "http://localhost:8080/api/start-monitor"
 
     # Set the monitoring time in seconds
-    params = {"total_monitoring_time": 30}  # Adjust time as needed
+    params = {"total_monitoring_time": 500000}  # Adjust time as needed
 
     # Make the GET request
     response = requests.get(api_url, params=params)
+    print(response)
 
 # Initialize Agent
 
@@ -840,8 +863,16 @@ def initialize_agent():
         func=get_balances_eth_usdc,
     )
 
+    startMonintorTool = CdpTool(
+        name="start_monitoring_pools",
+        description=START_MONITOR_DES,
+        cdp_agentkit_wrapper=agentkit,
+        args_schema=START_MONITOR_INP,
+        func=activateMonitoringPool,
+
+    )
+
     tools.append(signMessageTool)
-    tools.append(addMonitoringTermTool)
     tools.append(stake_eth_tool)
     tools.append(check_pool_balance_tool)
     tools.append(propose_yeild_opt_tool)
@@ -852,7 +883,8 @@ def initialize_agent():
         add_liquidity_to_curve_4Pool_tool,
         withdraw_from_curve_pool_tool,
         send_usdc_to_user_tool,
-        get_balances_eth_usdc_tool, propose_yield_dist_tool
+        get_balances_eth_usdc_tool, propose_yield_dist_tool,
+        startMonintorTool
     ])
     # Store buffered conversation history in memory.
     memory = MemorySaver()
@@ -873,7 +905,6 @@ def initialize_agent():
             "again later. If someone asks you to do something you can't do with your currently available tools, "
             "you must say so, and encourage them to implement it themselves using the CDP SDK + Agentkit, "
             "recommend they go to docs.cdp.coinbase.com for more information. Be concise and helpful with your "
-            "responses. Refrain from restating your tools' descriptions unless it is explicitly requested. You can also add terms for monitoring using an API call to localhost"
             "You can also call a function on a staking platform with some eth on a staking protocol using the call_function method"
             "You can also claim airdrop. For this, call the call_airdrop function"
             "You can transfer USDC from user. To do so, invoke the transer_usdc_from_user function"
@@ -882,13 +913,13 @@ def initialize_agent():
             "You can also stake in curve finance by calling stake_curve_finance function with requried wallet address as input to sender_address"
             "When you are asked by the user to find the balances of a given address, call the get_balances_eth_usdc_tool with input as the input address"
             """When asked for executing transaction based on yield optimization is proposed, ie after you call the Yeild optimization function, if the User says to execute the transactions, then ask them for approving the use of USDC by replying specifically : Please approve USDC Spend limit amount. The amount here is specified by the user. If not then ask them for the amount
-               When prompted as approved, Then run th following in the particular order : 
-                    1. transfer_usdc from user to agent wallet
+               When User input is the word approved, call only and only add_liquidity_to_curve_4Pool
             """
             """When asked for yield distrubtion, call the propose yield distribution with USDC value of your wallet address"""
             "When asked to fund a wallet, give the following answer : Please click the following button to fund your wallet. Do not call any function or anyhting extra reply"
             "When asked about how to grow my tokens or ocrypto, reply with : One of the ways to grow your crypto is to stake them in yield generating strategies. Then tell the user a little about yield and Curve finance"
             "If prompted on how to distribute my crypto, give answer by calling the propose_yield_distribution funciton. Read the result and also memorize the correspondign values needed to stake in each protcol"
+            "For monitoring, call stat monitor tool"
         ),
     ), config
 
