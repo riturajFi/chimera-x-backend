@@ -1,10 +1,36 @@
 {
+  "name": "",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "license": "AGPL-version-3.0",
+  "private": false,
+  "engines": {
+    "node": ">= 14.0.0",
+    "npm": ">= 6.0.0"
+  },
+  "homepage": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": "",
+  "keywords": [],
+  "author": {
+    "name": "",
+    "email": "",
+    "url": ""
+  },
+  "contributors": [],
+  "scripts": {
+    "dev": "",
+    "test": ""
+  },
   "dependencies": {
-    "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
     "express": "^4.21.2",
-    "glpk.js": "^4.0.2",
     "javascript-lp-solver": "^0.4.24",
-    "JSON": "^1.0.0"
+    "nillion-sv-wrappers": "^1.0.9"
   }
 }

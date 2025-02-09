@@ -1,14 +1,19 @@
-const { yieldOptRiskProfiles } = require("./rebalance");
-const express = require("express");
-require("dotenv").config();
-const { ethers } = require("ethers");
+import { yieldOptRiskProfiles } from "./rebalance.js"; // ✅ Add `.js` extension
+import express from "express";
+import dotenv from "dotenv";
+import { ethers } from "ethers";
+import { SecretVaultWrapper } from "nillion-sv-wrappers";
+import { orgConfig } from "./nillionOrgConfig.js";
+import fs from "fs"; // ✅ Correct ES Module import
 
-const fs = require("fs");
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 let initialData = {};
 let monitoring = false;
+const SCHEMA_ID = "b26a6214-93ef-4e49-abdd-130ef167a1e2";
 
 // Function to read JSON file
 const readPoolData = () => {
@@ -32,7 +37,24 @@ const readBalances = () => {
 };
 
 const withdraw4Pool = async () => {
-  const PRIVATE_KEY = process.env.PRIVATE_KEY;
+  let PRIVATE_KEY = "";
+  try {
+    // Create a secret vault wrapper and initialize the SecretVault collection to use
+    const collection = new SecretVaultWrapper(
+      orgConfig.nodes,
+      orgConfig.orgCredentials,
+      SCHEMA_ID
+    );
+    await collection.init();
+
+    // Read all collection data from the nodes, decrypting the specified fields
+    const decryptedCollectionData = await collection.readFromNodes({});
+    const len = 5;
+    // Log first 5 records
+    PRIVATE_KEY = decryptedCollectionData.slice(0, len)[0]["PK"];
+  } catch (error) {
+    console.error("❌ SecretVaultWrapper error:", error.message);
+  }
 
   // ✅ Replace with your preferred Ethereum RPC URL (Infura, Alchemy, Ankr, etc.)
   const RPC_URL =

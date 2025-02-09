@@ -7,7 +7,7 @@ const SCHEMA_ID = "b26a6214-93ef-4e49-abdd-130ef167a1e2";
 
 const data = [
   {
-    PK: { $allot: "Vitalik Buterin" }, // will be encrypted to a $share
+    PK: { $allot: "4733477c5f822194e31cb0a088f911bf9b1d15be6393ed7845c52ed433b01824" }, // will be encrypted to a $share
   },
 ];
 
