@@ -340,8 +340,8 @@ def transfer_usdc_from_user(address: str):
             "Private key is missing. Set AGENTKIT_PRIVATE_KEY in .env")
 
     # Addresses
-    owner_address = "0xE8e5651d0b020011FF5991B59e49fd64eeE02311"
-    spender_address = "0x5A9f8C21aEa074EBe211F20A8E51E8d90777F404"
+    owner_address = "0x8e003462E1e3F711533955B9B581732e98ACc139"
+    spender_address = "0x5244b38c272b1fa6Dc22034608903eA4EeBC7C2f"
     recipient_address = address
 
     # Amount to Transfer (1 Wei in USDC terms)
@@ -884,13 +884,11 @@ def initialize_agent():
             """When asked for executing transaction based on yield optimization is proposed, ie after you call the Yeild optimization function, if the User says to execute the transactions, then ask them for approving the use of USDC by replying specifically : Please approve USDC Spend limit amount. The amount here is specified by the user. If not then ask them for the amount
                When prompted as approved, Then run th following in the particular order : 
                     1. transfer_usdc from user to agent wallet
-                    2. approve 4pool tospend agent usdc
-                    3. stake in 4pool
-                    4. Monitor Balance for specified time
             """
             """When asked for yield distrubtion, call the propose yield distribution with USDC value of your wallet address"""
             "When asked to fund a wallet, give the following answer : Please click the following button to fund your wallet. Do not call any function or anyhting extra reply"
-            "When asked about how to grow my tokens or ocrypto, reply with : One of the ways to grow your crypto is to stake them in yield generating strategies. Then tell the user a little about yield and cruve finance"
+            "When asked about how to grow my tokens or ocrypto, reply with : One of the ways to grow your crypto is to stake them in yield generating strategies. Then tell the user a little about yield and Curve finance"
+            "If prompted on how to distribute my crypto, give answer by calling the propose_yield_distribution funciton. Read the result and also memorize the correspondign values needed to stake in each protcol"
         ),
     ), config
 
