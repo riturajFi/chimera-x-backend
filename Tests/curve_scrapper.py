@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import pandas as pd
 import re
+import json
 
 # Function to convert formatted volume (M, K, L, Cr) into pure numbers
 def convert_to_number(value):
@@ -49,9 +50,9 @@ with sync_playwright() as p:
     numerical_volumes = [convert_to_number(vol) for vol in raw_volumes]
 
     # Debugging: Print extracted data
-    print("Raw Pool Names:", pools[:6])
-    print("Filtered Base APYs:", base_apys[:6])
-    print("Numerical Volumes:", numerical_volumes[:6])
+    print("Raw Pool Names:", pools)
+    print("Filtered Base APYs:", base_apys)
+    print("Numerical Volumes:", numerical_volumes)
 
     # Ensure equal-length lists
     min_length = min(len(pools), len(base_apys), len(numerical_volumes))
@@ -60,13 +61,19 @@ with sync_playwright() as p:
     selected_volumes = numerical_volumes[:min_length]
 
     # Create DataFrame
-    df = pd.DataFrame({"Pool Name": selected_pools, "Base APY": selected_apys, "Volume": selected_volumes})
+    # df = pd.DataFrame({"Pool Name": selected_pools, "Base APY": selected_apys, "Volume": selected_volumes})
 
-    # Filter only the required pool names
-    required_pools = ["USDC/MONEY Curve LP", "USDC/USDM", "4pool"]
-    df = df[df["Pool Name"].isin(required_pools)]
+    # # Filter only the required pool names
 
-    # Print final table
-    print(df.to_string(index=False))
+    # # Print final table
+    # print(df.to_string(index=False))
+
+    result = [
+        {"Pool Name": selected_pools[i], "Base APY": selected_apys[i], "Volume": selected_volumes[i]}
+        for i in range(min_length)
+    ]
+
+    # Print JSON output
+    print(json.dumps(result, indent=4))
 
     browser.close()

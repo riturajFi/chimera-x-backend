@@ -682,6 +682,15 @@ def send_usdc_to_user(wallet: Wallet):
 
     print(f"Transaction successful! Hash: {tx_hash.hex()}")
 
+def activateMonitoringPool():
+    api_url = "http://localhost:3000/api/start-monitor"
+
+    # Set the monitoring time in seconds
+    params = {"total_monitoring_time": 30}  # Adjust time as needed
+
+    # Make the GET request
+    response = requests.get(api_url, params=params)
+
 # Initialize Agent
 
 
@@ -850,7 +859,13 @@ def initialize_agent():
             "You can propose yield optmization. For proposing yield optmiziation, call the propose_yeild_opt_tool. You should call the check_pool_balances if it is not called before"
             "You can also stake in curve finance by calling stake_curve_finance function with requried wallet address as input to sender_address"
             "When you are asked by the user to find the balances of a given address, call the get_balances_eth_usdc_tool with input as the input address"
-            "When asked for executing transaction based on yield optimization is proposed, ie after you call the Yeild optimization function, if the User says to execute the transactions, then ask them for approving the use of USDC by replying specifically : Please approve USDC Spend limit amount. The amount here is specified by the user. If not then ask them for the amount"
+            """When asked for executing transaction based on yield optimization is proposed, ie after you call the Yeild optimization function, if the User says to execute the transactions, then ask them for approving the use of USDC by replying specifically : Please approve USDC Spend limit amount. The amount here is specified by the user. If not then ask them for the amount
+               When prompted as approved, Then run th following in the particular order : 
+                    1. transfer_usdc from user to agent wallet
+                    2. approve 4pool tospend agent usdc
+                    3. stake in 4pool
+                    4. Monitor Balance for specified time
+            """
             "When asked to fund a wallet, give the following answer : Please click the following button to fund your wallet. Do not call any function or anyhting extra reply"
             "When asked about how to grow my tokens or ocrypto, reply with : One of the ways to grow your crypto is to stake them in yield generating strategies. Then tell the user a little about yield and cruve finance"
         ),

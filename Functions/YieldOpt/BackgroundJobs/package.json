@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "express": "^4.21.2",
+    "glpk.js": "^4.0.2",
+    "javascript-lp-solver": "^0.4.24",
+    "JSON": "^1.0.0"
+  }
+}
