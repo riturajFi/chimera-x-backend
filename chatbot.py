@@ -21,6 +21,7 @@ from Functions.YieldOpt.yield_o3_txnCost import yield_opt_o3
 from stake_curve_function import stake_curve
 from Functions.YieldOpt.check_curve_balances import get_balances
 from Functions.YieldOpt.rebalance_curve import yield_opt_risk_profiles
+from Functions.YieldOpt.distribute_cruve import yield_opt_allocation
 
 # Import CDP Agentkit Langchain Extension.
 from cdp_langchain.agent_toolkits import CdpToolkit
@@ -56,6 +57,8 @@ This tool can check the pool balances in lido, curve and aave for an address
 PROPOSE_YIELD_OPTIMIZATION = """
 This tool can propose a yield optimization
 """
+
+PROPOSE_YIELD_DISTRIBUTION = """Given a blance for an wallet, this tool proposes yield optimization techniques"""
 
 STAKE_CURVE = """Use this function to stake in curve finance"""
 
@@ -111,6 +114,11 @@ class ProposeYieldOptimizationInput(BaseModel):
         description="The dummy address"
     )
 
+# class ProposeYieldOptimizationInput(BaseModel):
+#     balance: str = Field(
+#         ...,
+#         description="The dummy address"
+#     )
 
 class StakeCurveInput(BaseModel):
     sender_address: str = Field(
@@ -286,6 +294,9 @@ def proposeYieldOptimization(address):
     #     }
 
     return yield_opt_risk_profiles(data=pool_balance_data, risk_profile="stable")
+
+def propose_yield_distribution(balance):
+    return yield_opt_allocation(balance)
 
 
 def stake_curve_finance(sender_address):
